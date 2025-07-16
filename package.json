@@ -1,0 +1,17 @@
+{
+  "name": "youtube-backend",
+  "version": "1.0.0",
+  "description": "Backend clone of YouTube built with Node.js, Express, and MongoDB",
+  "keywords": [
+    "node",
+    "backend",
+    "youtube"
+  ],
+  "license": "ISC",
+  "author": "Ajay Rathore",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  }
+}
