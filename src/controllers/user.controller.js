@@ -1,10 +1,11 @@
 import { asyncHandler } from "../utils/asyncHandler.js";
 import {User} from "../models/user.model.js";
 import { ApiError } from "../utils/ApiError.js";
+import { ApiResponse } from "../utils/ApiResponse.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 const registerUser = asyncHandler( async (req,res)=>{
     const {username, email, fullName, password} = req.body
-    if (!username || !email || !fullName || !password){
+    if ([username, email, password, fullName].some(field=> field?.trim() === "")){
         throw new ApiError(400,"All fields are required")
     }
     const existingUser = await User.findOne({
@@ -18,10 +19,8 @@ const registerUser = asyncHandler( async (req,res)=>{
     if(!avatarLocalPath){
         throw new ApiError(400,"Avatar is required")
     }
-    const {avatar, coverImage} = await Promise.all([
-        uploadOnCloudinary(avatarLocalPath),
-        coverLocalPath ? uploadOnCloudinary(coverLocalPath) : Promise.resolve(null)
-    ])
+    const avatar = await uploadOnCloudinary(avatarLocalPath)
+    const coverImage = coverLocalPath ? await uploadOnCloudinary(coverLocalPath) :null
     if(!avatar){
         throw new ApiError(500,"Failed to Upload avatar")
     }
