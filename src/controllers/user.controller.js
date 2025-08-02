@@ -227,9 +227,6 @@ const updateImage= async(req, res, fieldName, folder)=>{
         throw new ApiError(404,"User not found")
     }
     const oldImagePublicId = user[fieldName]?.public_id
-    if(oldImagePublicId){
-        await deleteFromCloudinary(oldImagePublicId)
-    }
     const updatedUser=await User.findByIdAndUpdate(req.user?._id,{
         $set:{
             [`${fieldName}.url`]:file.secure_url,
@@ -238,6 +235,9 @@ const updateImage= async(req, res, fieldName, folder)=>{
     },{
         new:true
     }).select("-password")
+    if(oldImagePublicId){
+        await deleteFromCloudinary(oldImagePublicId)
+    }
     
     return res.status(200).json(
         new ApiResponse(200,
