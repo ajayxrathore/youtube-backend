@@ -4,6 +4,7 @@ import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { uploadOnCloudinary, deleteFromCloudinary } from "../utils/cloudinary.js";
 import jwt from "jsonwebtoken"
+import mongoose from "mongoose";
 
 const generateAccessAndRefreshToken = async(userId)=>{
     try {
@@ -320,7 +321,71 @@ const getUserChannel = asyncHandler( async(req,res)=>{
         )
     )
 })
-    
+
+const getWatchHistory = asyncHandler( async(req,res)=>{
+    if(!req.user?._id){
+        throw new ApiError(401,"User not authenticated")
+    }
+    const user = await User.aggregate([
+        {
+            $match:{
+                _id: new mongoose.Types.ObjectId(req.user?._id)
+            }
+        },
+        {
+            $lookup:{
+                from:"videos",
+                localField:"watchHistory",
+                foreignField:"_id",
+                as:"watchHistory",
+                pipeline:[
+                    {
+                        $lookup:{
+                            from:"users",
+                            localField:"owner",
+                            foreignField:"_id",
+                            as:"owner",
+                            pipeline:[
+                                {
+                                    $project:{
+                                        username:1,
+                                        fullName:1,
+                                        avatar:1
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        $addFields:{
+                            owner:{
+                                $cond:{
+                                    if:{
+                                        $gt:[{$size:"$owner"},0]
+                                    },
+                                    then:{
+                                        $first:"$owner"
+                                    },
+                                    else:null
+                                }
+                            }
+                        }
+                    }
+                ],
+            }
+        }
+    ])
+    if(!user?.length){
+        throw new ApiError(404,"User not found")
+    }
+    return res.status(200).json(
+        new ApiResponse(200,
+            "User watch history fetched successfully",
+            user[0].watchHistory
+        )
+    )
+})
+
 export { 
     registerUser,
     loginUser,
@@ -331,5 +396,6 @@ export {
     updateUser,
     updateAvatar,
     updateCoverImage,
-    getUserChannel
+    getUserChannel,
+    getWatchHistory
 };
