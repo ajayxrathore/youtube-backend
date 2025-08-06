@@ -326,6 +326,9 @@ const getWatchHistory = asyncHandler( async(req,res)=>{
     if(!req.user?._id){
         throw new ApiError(401,"User not authenticated")
     }
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit)|| 10;
+    const skip = (page -1)*limit;
     const user = await User.aggregate([
         {
             $match:{
@@ -370,6 +373,12 @@ const getWatchHistory = asyncHandler( async(req,res)=>{
                                 }
                             }
                         }
+                    },
+                    {
+                        $skip: skip
+                    },
+                    {
+                        $limit: limit
                     }
                 ],
             }
