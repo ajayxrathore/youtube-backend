@@ -24,6 +24,39 @@ const generateAccessAndRefreshToken = async(userId)=>{
         throw new ApiError(500, "Failed to generate tokens: " + error.message);
     }
 }
+const updateImage = async(req, res, fieldName, folder)=>{
+    const localFilePath = req.file?.path
+    if (!localFilePath){
+        throw new ApiError(400,"File path is missing")
+    }
+    const file = await uploadOnCloudinary(localFilePath,folder)
+    if(!file || !file.secure_url || !file.public_id){
+        throw new ApiError(500,"File couldn't be uploaded")
+    }
+    const user = await User.findById(req.user?._id)
+    if(!user){
+        throw new ApiError(404,"User not found")
+    }
+    const oldImagePublicId = user[fieldName]?.public_id
+    const updatedUser=await User.findByIdAndUpdate(req.user?._id,{
+        $set:{
+            [`${fieldName}.url`]:file.secure_url,
+            [`${fieldName}.public_id`]:file.public_id
+        }
+    },{
+        new:true
+    }).select("-password")
+    if(oldImagePublicId){
+        await deleteFromCloudinary(oldImagePublicId)
+    }
+    
+    return res.status(200).json(
+        new ApiResponse(200,
+            "User Image updated successfully",
+            updatedUser
+        )
+    )
+}
 const registerUser = asyncHandler( async (req,res)=>{
     const {username, email, fullName, password} = req.body
     if ([username, email, password, fullName].some(field=> field?.trim() === "")){
@@ -214,39 +247,6 @@ const updateUser = asyncHandler( async (req,res)=>{
 
     
 })
-const updateImage= async(req, res, fieldName, folder)=>{
-    const localFilePath = req.file?.path
-    if (!localFilePath){
-        throw new ApiError(400,"File path is missing")
-    }
-    const file = await uploadOnCloudinary(localFilePath,folder)
-    if(!file || !file.secure_url || !file.public_id){
-        throw new ApiError(500,"File couldn't be uploaded")
-    }
-    const user = await User.findById(req.user?._id)
-    if(!user){
-        throw new ApiError(404,"User not found")
-    }
-    const oldImagePublicId = user[fieldName]?.public_id
-    const updatedUser=await User.findByIdAndUpdate(req.user?._id,{
-        $set:{
-            [`${fieldName}.url`]:file.secure_url,
-            [`${fieldName}.public_id`]:file.public_id
-        }
-    },{
-        new:true
-    }).select("-password")
-    if(oldImagePublicId){
-        await deleteFromCloudinary(oldImagePublicId)
-    }
-    
-    return res.status(200).json(
-        new ApiResponse(200,
-            "User Image updated successfully",
-            updatedUser
-        )
-    )
-}
 const updateAvatar = asyncHandler(async(req,res)=>{
     await updateImage(req, res, "avatar","avatars")
 })
