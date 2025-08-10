@@ -108,6 +108,7 @@ const registerUser = asyncHandler( async (req,res)=>{
 })
 const loginUser = asyncHandler( async (req,res)=>{
     const {email, username, password} = req.body
+    
     if (!password || !(email || username)){
         throw new ApiError(400, "Username/email and password are required")
     }
@@ -154,6 +155,37 @@ const logoutUser =  asyncHandler( async (req,res)=>{
     .json(
         new ApiResponse(200,
             "User logged out successfully",
+            {}
+        )
+    )
+})
+const deleteUser = asyncHandler( async(req,res)=>{
+    if (!req.user?._id){
+        throw new ApiError(401,"User not authenticated")
+    }
+    const user = await User.findById(req.user._id)
+    if(!user){
+        throw new ApiError(404,"User not found")
+    }
+    const avatarPubblicId = user.avatar?.public_id
+    const coverImagePublicId = user.coverImage?.public_id
+    await User.findByIdAndDelete(req.user._id)
+    if(avatarPubblicId){
+        await deleteFromCloudinary(avatarPubblicId)
+    }
+    if(coverImagePublicId){
+        await deleteFromCloudinary(coverImagePublicId)
+    }
+     const options = {
+        httpOnly:true,
+        secure:true
+    }
+    return res.status(200)
+    .clearCookie("accessToken",options)
+    .clearCookie("refreshToken",options)
+    .json(
+        new ApiResponse(200,
+            "User deleted successfully",
             {}
         )
     )
@@ -321,7 +353,6 @@ const getUserChannel = asyncHandler( async(req,res)=>{
         )
     )
 })
-
 const getWatchHistory = asyncHandler( async(req,res)=>{
     if(!req.user?._id){
         throw new ApiError(401,"User not authenticated")
@@ -399,6 +430,7 @@ export {
     registerUser,
     loginUser,
     logoutUser,
+    deleteUser,
     refreshAccessToken,
     updatePassword,
     currentUser,

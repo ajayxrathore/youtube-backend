@@ -2,6 +2,7 @@ import { Router } from "express";
 
 import {
   currentUser,
+  deleteUser,
   getUserChannel,
   getWatchHistory,
   loginUser,
@@ -36,9 +37,11 @@ router.route("/login").post(loginUser);
 
 router.route("/logout").post(verifyJWT, logoutUser);
 
+router.route("/delete").post(verifyJWT, deleteUser)
+
 router.route("/refresh-token").post(refreshAccessToken);
 
-router.route("update-password").post(verifyJWT, updatePassword);
+router.route("/update-password").post(verifyJWT, updatePassword);
 
 router.route("/current-user").get(verifyJWT, currentUser);
 

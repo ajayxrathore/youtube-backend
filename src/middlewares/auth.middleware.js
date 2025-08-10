@@ -5,8 +5,8 @@ import jwt from "jsonwebtoken"
 
 
 export const verifyJWT = asyncHandler(async (req, _, next) => {
-    const headerToken = req.header("Authorization").replace("Bearer ","")
-    const cookieToken = req.cookies?.("accessToken")
+    const headerToken = req.header("Authorization")?.replace("Bearer ","")
+    const cookieToken = req.cookies?.accessToken
     const token = cookieToken || headerToken
     if(!token){
         throw new ApiError(401,"Access token missing: Unauthorized")
@@ -17,7 +17,7 @@ export const verifyJWT = asyncHandler(async (req, _, next) => {
     } catch (error) {
         throw new ApiError(401,"Invalid or expired access token")
     }
-    const user = await User.findById(decodedToken._id).select("-password -refreshToken")
+    const user = await User.findById(decodedToken?._id).select("-password -refreshToken")
     if(!user){
         throw new ApiError(401,"User does not exists")
     }
