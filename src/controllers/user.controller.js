@@ -1,10 +1,11 @@
 import { asyncHandler } from "../utils/asyncHandler.js";
 import {User} from "../models/user.model.js";
+import {Video} from "../models/video.model.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { uploadOnCloudinary, deleteFromCloudinary } from "../utils/cloudinary.js";
 import jwt from "jsonwebtoken"
-import mongoose from "mongoose";
+
 
 const generateAccessAndRefreshToken = async(userId)=>{
     try {
@@ -359,7 +360,7 @@ const getWatchHistory = asyncHandler( async(req,res)=>{
     }
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit)|| 10;
-    const skip = (page -1)*limit;
+    /*const skip = (page -1)*limit;
     const user = await User.aggregate([
         {
             $match:{
@@ -417,11 +418,62 @@ const getWatchHistory = asyncHandler( async(req,res)=>{
     ])
     if(!user?.length){
         throw new ApiError(404,"User not found")
+    }*/
+   const user = await User.findById(req.user._id,{watchHistory:1})
+    if(!user || !user.watchHistory || user.watchHistory.length === 0){
+        return res.status(200).json(
+            new ApiResponse(200,
+                "No watch history found",
+                []
+            )
+        )
     }
+    const aggregate = Video.aggregate([
+        {
+            $match:{
+                _id: {$in: user.watchHistory}
+            }
+        },{
+            $lookup:{
+                from:"users",
+                localfield:"owner",
+                foreignField:"_id",
+                as:"owner",
+                pipeline:[
+                    {
+                        $project:{
+                            username:1,
+                            fullName:1,
+                            avatar:1
+                        }
+                    }
+                ]
+            }
+        },{
+            $addFields:{
+                owner:{
+                    $cond:{
+                        if:{$gt:[{$size:"$owner"},0]},
+                        then:{$first:"$owner"},
+                        else:null
+                    }
+                }
+            }
+        },{
+            $sort:{
+                createdAt:-1
+            }
+        }
+    ])
+    const options ={
+        page,
+        limit
+    }
+    const result = await Video.aggregatePaginate(aggregate, options)
     return res.status(200).json(
         new ApiResponse(200,
             "User watch history fetched successfully",
-            user[0].watchHistory
+            result
         )
     )
 })
