@@ -14,4 +14,12 @@ const subscriptionSchema = new Schema({
 }
     ,{timestamps: true}
 );
+subscriptionSchema.index({channel: 1, subscriber: 1}, {unique: true}); // Ensures a user can only subscribe to a channel once
+
+// For quick lookup of subscribers by channel
+subscriptionSchema.index({channel:1})
+
+// For quick lookup of subscriptions by subscriber
+subscriptionSchema.index({subscriber:1});
+
 export const Subscription = mongoose.model("Subscription", subscriptionSchema);
